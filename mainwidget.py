@@ -16,8 +16,6 @@ def get_hwnd_from_qt_widget(widget):
     ctypes.pythonapi.PyCObject_AsVoidPtr.restype = ctypes.c_void_p
     ctypes.pythonapi.PyCObject_AsVoidPtr.argtypes = [ctypes.py_object]
     wdgt_ptr = ctypes.pythonapi.PyCObject_AsVoidPtr(widget.winId())
-    # wdgt_ptr_df = ctypes.cast(wdgt_ptr, ctypes.LP_c_long)
-    # print type(wdgt_ptr_df.contents)
     return wdgt_ptr
 
 class MainWidget(QtGui.QWidget):
@@ -34,16 +32,19 @@ class MainWidget(QtGui.QWidget):
 
         self.btn.clicked.connect(self.on_btn_clicked)
 
-        self.parent_hwnd = None
+        # self.parent_hwnd = None
 
     def on_btn_clicked(self):
         print "clicked"
 
     def paintEvent(self, event):
-        self.center()
+        # This is a hacky way to make sure input detection (clicking)
+        # is in-sync with what is drawn, by forcing qt to update the
+        # geometry.
+        self._update_bounds()
         event.accept()
 
-    def center(self):
+    def _update_bounds(self):
         # if not self.parent_hwnd:
         #     return
         # rect = ctypes.wintypes.RECT()
@@ -82,22 +83,11 @@ qtwdgt_hwnd = get_hwnd_from_qt_widget(qtwdgt)
 print "mx_hwnd: {mx_hwnd}, qt_hwnd: {qt_hwnd}".format(
     mx_hwnd=mx_hwnd, qt_hwnd=qtwdgt_hwnd)
 
-# bkg_hwnd = get_hwnd_from_qt_widget(qtwdgt.bkg_wdgt)
 
 # Parent the qt widget to the native max dialog window
 SetParent(qtwdgt_hwnd, mx_hwnd)
-# SetParent(bkg_hwnd, mx_hwnd)
-# SetParent(mx_hwnd, qtwdgt_hwnd)
 
 # Make the qt widget behave like a client widget
-# SetWindowLong( qtwdgt_hwnd, GWL_STYLE, WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS)
 SetWindowLong(qtwdgt_hwnd, GWL_STYLE, WS_CHILD | WS_CLIPSIBLINGS)
 
-# rect = Rect()
-# rectl = ctypes.byref(rect)
-# GetWindowRect( wnd.hwnd, rectl)
-
-
-# sys.exit(app.exec_())
-qtwdgt.parent_hwnd = mx_hwnd
 qtwdgt.show()
