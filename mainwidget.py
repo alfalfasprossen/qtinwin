@@ -4,6 +4,24 @@ import sys
 import winCom
 import ctypes
 
+
+# TODO:
+# test the exchange wndproc with a non-max thing like the text-editor
+# try to just use a qt-widget directly and experiment with the
+# window flags on it (with setwindowlong) and parent it directly to the
+# max main window. Maybe we can get this to behave correctly that way as
+# well.
+# There is probably a maxplus function to get the hwnd, but i'm also
+# pretty sure this has already been tried.
+
+# this probably won't work, because positioning is a problem, but
+# resizing would do fine i guess:
+# set the native window to borderless, while the qt window keeps its
+# border (might also give problems concerning correct focus, as it is
+# no longer treated as a 'child window').
+# The qt widget could be resized by its border and on resize we could
+# set the dimensions on the parent window.
+
 SetParent = ctypes.windll.user32.SetParent
 SetWindowLong = ctypes.windll.user32.SetWindowLongW
 GWL_STYLE = -16
@@ -11,6 +29,35 @@ WS_CHILD = 0x40000000
 WS_CLIPCHILDREN = 0x02000000
 WS_CLIPSIBLINGS = 0x04000000
 GetWindowRect = ctypes.windll.user32.GetWindowRect
+
+class GCSave(object):
+    @staticmethod
+    def window_proc(hwnd, uMsg, wParam, lParam):
+        print "window_proc called"
+        return CallWindowProc(GCSave.old_proc, hwnd, uMsg, wParam, lParam);
+
+WindowProc = ctypes.WINFUNCTYPE(ctypes.c_long,
+                                ctypes.POINTER(ctypes.c_int),
+                                ctypes.c_uint,
+                                ctypes.POINTER(ctypes.c_int),
+                                ctypes.POINTER(ctypes.c_int))
+
+def replace_wnd_proc(widget):
+    GCSave.old_proc = GetWindowLongPtr(widget.parent_hwnd, GWL_WNDPROC)
+    print "old_proc stored: "
+    print GCSave.old_proc
+    qtwindproc = GetWindowLongPtr(widget.hwnd, GWL_WNDPROC)
+    # print "qtwidget wndproc: "
+    # print qtwindproc
+    # res = SetWindowLongPtr(widget.hwnd, GWL_WNDPROC,
+    #                        GCSave.old_proc)
+    # print "new proc set: "
+    # print res
+    # res = SetWindowLongPtr(widget.parent_hwnd, GWL_WNDPROC,
+    #                        WindowProc(GCSave.window_proc))
+    # print "new proc set: "
+    # print res
+
 
 def get_hwnd_from_qt_widget(widget):
     ctypes.pythonapi.PyCObject_AsVoidPtr.restype = ctypes.c_void_p
@@ -26,7 +73,9 @@ class MainWidget(QtGui.QWidget):
         self.layout().addWidget(self.bkg_wdgt)
         self.bkg_wdgt.setLayout(QtGui.QHBoxLayout())
         self.btn = QtGui.QPushButton("hallo")
+        self.textarea = QtGui.QTextEdit()
         self.bkg_wdgt.layout().addWidget(self.btn)
+        self.bkg_wdgt.layout().addWidget(self.textarea)
 
         self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
 
